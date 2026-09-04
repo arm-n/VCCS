@@ -2,11 +2,11 @@
 
 ## 1. Project Overview
 
-This repository contains the LTspice design and simulation work for a PWM-controlled voltage-controlled current source (VCCS).
+This repository contains the LTspice design and simulation work for a PWM-controlled Voltage-Controlled Current Source (VCCS) developed for the Electronics Design Engineer assignment.
 
-The circuit converts a PWM voltage input into a controlled, unidirectional current pulse using an operational amplifier, an NMOS transistor, and a source current-sense resistor in a low-side current-sink topology.
+The objective of the design is to convert a PWM voltage command into a controlled, monophasic output current of 0–5 mA while maintaining the commanded current over a representative load range.
 
-This project was developed for the Electronics Design Engineer VCCS assignment.
+The design was implemented and tested in LTspice using a low-side, op-amp-controlled NMOS current-sink topology.
 
 ---
 
@@ -21,11 +21,11 @@ This project was developed for the Electronics Design Engineer VCCS assignment.
 | Output current | 0–5 mA |
 | Transconductance | 1 mA/V |
 | Current direction | Monophasic / unidirectional |
-| Load | 1–10 kΩ |
+| Load impedance | 1–10 kΩ |
 | Maximum circuit voltage | 70 V |
 | Target current accuracy | ±10% |
 
-Required current mapping:
+Required nominal input/output relationship:
 
 ```text
 0 V → 0 mA
@@ -36,15 +36,17 @@ Required current mapping:
 5 V → 5 mA
 ```
 
-The assignment also requests LTspice/equivalent evidence for current versus load impedance, frequency response, and current accuracy.
+The assignment also requests LTspice/equivalent simulation evidence for current versus load impedance, frequency response, and current accuracy.
 
 ---
 
-## 3. Chosen Circuit Topology
+## 3. Selected Circuit Topology
 
 ### Low-Side Op-Amp Controlled NMOS Current Sink
 
-The selected topology is:
+The selected topology uses an operational amplifier to control an NMOS transistor while sensing the voltage across a source resistor.
+
+Basic current path:
 
 ```text
               +60 V
@@ -57,14 +59,14 @@ The selected topology is:
                 |
               SENSE
                 |
-            RSENSE = 1 kΩ
+          RSENSE = 1 kΩ
                 |
                GND
 ```
 
-The op-amp senses the voltage across `RSENSE` and drives the NMOS gate so that the SENSE voltage follows the PWM command.
+The op-amp compares the PWM command with the SENSE voltage and drives the MOSFET gate through negative feedback.
 
-Approximately:
+The intended relationship is:
 
 ```text
 V(SENSE) ≈ V(PWM)
@@ -82,13 +84,13 @@ With:
 R_SENSE = 1 kΩ
 ```
 
-the intended transconductance is:
+the nominal transconductance is:
 
 ```text
 I_OUT ≈ V_PWM / 1 kΩ
 ```
 
-or approximately:
+or:
 
 ```text
 1 mA/V
@@ -96,7 +98,7 @@ or approximately:
 
 ---
 
-## 4. Circuit Connections
+## 4. Complete Circuit Connections
 
 ```text
 +60 V supply
@@ -142,7 +144,7 @@ U1 V−
    GND
 ```
 
-All circuit returns use the same ground reference.
+All circuit grounds share the same reference.
 
 ---
 
@@ -152,15 +154,15 @@ All circuit returns use the same ground reference.
 |---|---|---|
 | V_HV | High-voltage supply | +60 V |
 | V_CC | Op-amp supply | +15 V |
-| U1 | Op-amp | UniversalOpamp2 |
+| U1 | Operational amplifier | UniversalOpamp2 |
 | M1 | NMOS | MYNMOS |
-| RLOAD | Load | `{Rload}` |
+| RLOAD | Load resistor | `{Rload}` |
 | RSENSE | Current-sense resistor | 1 kΩ |
 | R_IN | PWM input resistor | 1 kΩ |
 | R_G | Gate resistor | 100 Ω |
-| R3 | Gate pull-down | 100 kΩ |
+| R3 | Gate pull-down resistor | 100 kΩ |
 
-MOSFET model currently used in the LTspice schematic:
+MOSFET simulation model:
 
 ```spice
 .model MYNMOS NMOS(LEVEL=1 VTO=2 KP=0.01 LAMBDA=0.005)
@@ -172,13 +174,13 @@ MOSFET model currently used in the LTspice schematic:
 
 ### 6.1 Current-Sense Resistor
 
-The feedback loop is intended to force:
+The feedback loop is designed to force:
 
 ```text
-V(SENSE) = V(PWM)
+V(SENSE) ≈ V(PWM)
 ```
 
-For a resistive current-sense element:
+The output current is determined by the sense resistor:
 
 ```text
 I_OUT = V(SENSE) / R_SENSE
@@ -191,13 +193,7 @@ R_SENSE = 1 V / 1 mA
         = 1 kΩ
 ```
 
-Thus the nominal current relationship is:
-
-```text
-I_OUT(mA) ≈ V_PWM(V)
-```
-
-At 5 V:
+At the maximum command:
 
 ```text
 I_OUT = 5 V / 1 kΩ
@@ -238,38 +234,34 @@ V_SENSE = 5 mA × 1 kΩ
         = 5 V
 ```
 
-With approximately 5 V additional MOSFET headroom:
+Allowing approximately 5 V for MOSFET headroom gives:
 
 ```text
 V_HV ≈ 50 V + 5 V + 5 V
      ≈ 60 V
 ```
 
-The selected simulation rail is therefore:
+The simulation therefore uses:
 
 ```text
-V_HV = 60 V
+V_HV = +60 V
 ```
 
-which is below the assignment's 70 V maximum circuit-voltage requirement.
+which is below the 70 V maximum circuit-voltage requirement.
 
 ### 6.4 MOSFET Voltage Requirement
 
-When the MOSFET is off, its drain can rise toward the +60 V supply. The simulation therefore uses a model with a 100 V breakdown target:
+When the MOSFET is off, its drain can rise toward the +60 V rail. A 100 V device class is therefore targeted for a practical implementation.
 
-```text
-BV = 100 V
-```
-
-for voltage-margin assessment.
+The LTspice simulation uses the self-contained `MYNMOS` model defined in the schematic.
 
 ---
 
-## 7. LTspice Configuration
+## 7. LTspice Simulation Setup
 
 ### 7.1 PWM Source
 
-The PWM source is a standard LTspice voltage source using:
+The PWM input is implemented using a standard LTspice voltage source configured as:
 
 ```spice
 PULSE(0 {Vamp} 0 100n 100n {pw} {per})
@@ -284,7 +276,7 @@ Base parameters:
 .param Rload=5k
 ```
 
-The baseline condition is therefore:
+Baseline condition:
 
 ```text
 PWM amplitude = 5 V
@@ -304,100 +296,7 @@ Baseline transient command:
 
 ### 7.3 Current-Level Sweep
 
-The current-level sweep is defined by:
-
-```spice
-.step param Vamp list 1 2 3 4 5
-```
-
-This corresponds to the requested nominal mapping:
-
-```text
-1 V → 1 mA
-2 V → 2 mA
-3 V → 3 mA
-4 V → 4 mA
-5 V → 5 mA
-```
-
-### 7.4 Load Sweep
-
-The load sweep is defined by:
-
-```spice
-.step param Rload list 1k 5k 10k
-```
-
-This checks the current-source behavior over the requested representative load values.
-
----
-
-## 8. Current Measurement
-
-The primary output-current probe is:
-
-```text
-I(Rsense)
-```
-
-Because the sense resistor, MOSFET, and load form the same series current path, `I(Rsense)` represents the output current for this simulation.
-
-The SENSE-node voltage is also a useful control-loop measurement:
-
-```text
-I_OUT = V(SENSE) / 1 kΩ
-```
-
----
-
-## 9. Baseline Simulation Status
-
-A working baseline simulation has been run with:
-
-```text
-Vamp       = 5 V
-Rload      = 5 kΩ
-Frequency  = 50 Hz
-Pulse width = 200 µs
-```
-
-Observed behavior:
-
-- SENSE voltage rises to approximately 5 V during the active PWM pulse.
-- `I(Rsense)` rises to approximately 5 mA.
-- The current returns to approximately 0 mA when the PWM signal is inactive.
-- The current pulse has a clean flat top over the active pulse interval.
-- No pronounced flat-top droop or sustained ringing was observed in the baseline waveform.
-
-The baseline result therefore demonstrates the intended 5 mA current-sink behavior for that tested operating point.
-
----
-
-## 10. Load Sweep Status
-
-A load sweep was run using:
-
-```spice
-.step param Rload list 1k 5k 10k
-```
-
-At the 5 mA command, the plotted current traces overlap closely across:
-
-```text
-1 kΩ
-5 kΩ
-10 kΩ
-```
-
-This indicates approximately constant current over the tested load values.
-
-The repository should only claim measured performance that was actually observed in the simulations.
-
----
-
-## 11. Current Sweep Status
-
-The current-level sweep is run with:
+The current-command sweep is defined by:
 
 ```spice
 .step param Vamp list 1 2 3 4 5
@@ -413,22 +312,166 @@ The nominal target levels are:
 | 4 V | 4 mA |
 | 5 V | 5 mA |
 
-The current is evaluated using `I(Rsense)`.
+### 7.4 Load Sweep
+
+The load sweep is defined by:
+
+```spice
+.step param Rload list 1k 5k 10k
+```
+
+This evaluates the current-source behavior at the representative load values required by the assignment.
 
 ---
 
-## 12. Results Directory
+## 8. Current Measurement
 
-Recommended result filenames:
+The primary output-current probe in LTspice is:
+
+```text
+I(Rsense)
+```
+
+The SENSE-node voltage can also be monitored:
+
+```text
+V(SENSE)
+```
+
+The current-sense relationship is:
+
+```text
+I_OUT = V(SENSE) / 1 kΩ
+```
+
+---
+
+## 9. Baseline Simulation Status
+
+A working baseline simulation was run with:
+
+```text
+Vamp        = 5 V
+Rload       = 5 kΩ
+Frequency   = 50 Hz
+Pulse width = 200 µs
+```
+
+Observed baseline behavior:
+
+- The PWM source generates the expected pulse waveform.
+- The SENSE node rises to approximately 5 V during the active pulse.
+- `I(Rsense)` rises to approximately 5 mA.
+- The current returns to approximately 0 mA between pulses.
+- The current pulse has a flat top over the active interval.
+- No pronounced sustained ringing or flat-top droop was observed in the baseline waveform.
+
+This demonstrates the intended nominal 5 mA current-sink behavior for the tested baseline operating point.
+
+---
+
+## 10. Load Sweep Status
+
+A load sweep was performed using:
+
+```spice
+.step param Rload list 1k 5k 10k
+```
+
+At the 5 mA command, the current traces for the tested loads overlap closely.
+
+Tested loads:
+
+```text
+1 kΩ
+5 kΩ
+10 kΩ
+```
+
+The observed behavior is consistent with the intended current-source characteristic: the output current remains approximately constant while the load resistance changes across the tested values.
+
+---
+
+## 11. Current-Level Sweep Status
+
+A PWM-amplitude sweep was performed using:
+
+```spice
+.step param Vamp list 1 2 3 4 5
+```
+
+This evaluates the nominal current-command range:
+
+```text
+1 mA
+2 mA
+3 mA
+4 mA
+5 mA
+```
+
+The current is evaluated using:
+
+```text
+I(Rsense)
+```
+
+The simulation outputs should be interpreted from the actual LTspice traces rather than from the nominal equations alone.
+
+---
+
+## 12. Simulation and Schematic Images
+
+### Schematic
+
+The `Schematic/` directory contains the schematic screenshots captured during the design process:
+
+```text
+Schematic/
+├── sch_1.png
+├── sch_2.png
+├── sch_3.png
+├── sch_4.png
+├── sch_5.png
+├── sch_6.png
+├── sch_7.png
+└── sch_8.png
+```
+
+These images document the development of the LTspice schematic and the final circuit arrangement.
+
+### Simulation Results
+
+The `Results/` directory contains the LTspice waveform screenshots generated during the simulation and verification process:
 
 ```text
 Results/
-├── baseline_5mA_5k_50Hz_200us.png
-├── load_sweep_1k_5k_10k.png
-└── current_sweep_1mA_5mA.png
+├── res_1.png
+├── res_2.png
+├── res_3.png
+├── res_4.png
+├── res_5.png
+├── res_6.png
+├── res_7.png
+├── res_8.png
+├── res_9.png
+├── res_10.png
+├── res_11.png
+├── res_12.png
+├── res_13.png
+├── res_14.png
+├── res_15.png
+├── res_16.png
+├── res_17.png
+├── res_18.png
+├── res_19.png
+├── res_20.png
+├── res_21.png
+├── res_22.png
+└── res_final.png
 ```
 
-Only simulations that were actually performed should be represented as results.
+The numbered screenshots preserve the simulation and verification history. `res_final.png` contains the final selected simulation result.
 
 ---
 
@@ -436,68 +479,51 @@ Only simulations that were actually performed should be represented as results.
 
 ```text
 VCCS/
+├── LICENSE
 ├── README.md
 │
 ├── LTspice/
 │   └── VCCS.asc
 │
-├── Schematic/
-│   └── VCCS_schematic.png
+├── Results/
+│   ├── res_1.png
+│   ├── res_2.png
+│   ├── res_3.png
+│   ├── res_4.png
+│   ├── res_5.png
+│   ├── res_6.png
+│   ├── res_7.png
+│   ├── res_8.png
+│   ├── res_9.png
+│   ├── res_10.png
+│   ├── res_11.png
+│   ├── res_12.png
+│   ├── res_13.png
+│   ├── res_14.png
+│   ├── res_15.png
+│   ├── res_16.png
+│   ├── res_17.png
+│   ├── res_18.png
+│   ├── res_19.png
+│   ├── res_20.png
+│   ├── res_21.png
+│   ├── res_22.png
+│   └── res_final.png
 │
-└── Results/
-    ├── baseline_5mA_5k_50Hz_200us.png
-    ├── load_sweep_1k_5k_10k.png
-    └── current_sweep_1mA_5mA.png
+└── Schematic/
+    ├── sch_1.png
+    ├── sch_2.png
+    ├── sch_3.png
+    ├── sch_4.png
+    ├── sch_5.png
+    ├── sch_6.png
+    ├── sch_7.png
+    └── sch_8.png
 ```
 
-### File descriptions
-
-`LTspice/VCCS.asc`  
-The editable LTspice schematic containing the circuit and simulation setup.
-
-`Schematic/VCCS_schematic.png`  
-Visual representation of the complete circuit schematic.
-
-`Results/`  
-Screenshots of LTspice simulation waveforms actually generated during testing.
-
-`README.md`  
-Project description, circuit topology, calculations, component values, simulation configuration, and current status.
-
 ---
 
-## 14. Current Project Status
-
-### Completed / demonstrated
-
-- VCCS topology implemented in LTspice.
-- +60 V high-voltage supply implemented.
-- +15 V single-supply op-amp rail implemented.
-- PWM voltage source implemented.
-- 1 kΩ current-sense resistor implemented.
-- NMOS current sink implemented.
-- 100 Ω gate resistor implemented.
-- 100 kΩ gate pull-down implemented.
-- 5 mA baseline current waveform demonstrated.
-- 5 kΩ baseline load demonstrated.
-- 50 Hz / 200 µs baseline pulse demonstrated.
-- Load sweep across 1 kΩ, 5 kΩ, and 10 kΩ performed.
-- PWM-amplitude/current-level sweep performed.
-
-### Not claimed as fully verified
-
-The following should only be claimed as fully verified after the corresponding simulations and numerical measurements have been completed:
-
-- Complete ±10% accuracy across every required operating point.
-- Complete frequency verification from 1 Hz through 200 Hz.
-- Complete pulse-width verification from 20 µs through 500 µs.
-- Quantified RMS noise and peak-to-peak ripple across the full required operating range.
-
-The assignment permits partial results when limitations are clearly and honestly documented.
-
----
-
-## 15. Reproducing the Baseline Simulation
+## 14. Reproducing the Baseline Simulation
 
 1. Open `LTspice/VCCS.asc`.
 2. Confirm the MOSFET value is `MYNMOS`.
@@ -529,14 +555,46 @@ PULSE(0 {Vamp} 0 100n 100n {pw} {per})
 ```
 
 7. Run the simulation.
-8. Plot `I(Rsense)`.
+8. Plot `I(Rsense)` to observe output current.
+9. Plot `V(SENSE)` to observe the feedback voltage.
 
-The expected nominal baseline waveform is a current pulse of approximately:
+Expected nominal baseline behavior:
 
 ```text
-5 mA during the active PWM interval
+≈5 mA during the active PWM interval
 ≈0 mA during the inactive interval
 ```
+
+---
+
+## 15. Current Project Status
+
+### Completed / demonstrated
+
+- LTspice VCCS schematic created.
+- Low-side op-amp/NMOS current-sink topology implemented.
+- +60 V high-voltage rail implemented.
+- +15 V single-supply op-amp rail implemented.
+- PWM voltage source implemented.
+- 1 kΩ current-sense resistor implemented.
+- 100 Ω gate resistor implemented.
+- 100 kΩ gate pull-down implemented.
+- Baseline 5 mA current waveform demonstrated.
+- Baseline 5 kΩ load demonstrated.
+- Baseline 50 Hz / 200 µs pulse demonstrated.
+- Load sweep across 1 kΩ, 5 kΩ, and 10 kΩ performed.
+- PWM-amplitude/current-level sweep performed.
+- Schematic and simulation screenshots collected.
+
+### Verification status
+
+The design and simulations demonstrate the intended current-source behavior for the operating conditions that were actually run.
+
+A complete claim of ±10% accuracy across every combination of current, load, frequency, and pulse width should only be made after numerical measurements have been completed for those combinations.
+
+Similarly, complete verification of the full 1–200 Hz and 20–500 µs operating ranges requires the corresponding boundary-condition simulations and measurements.
+
+The repository therefore distinguishes between the design target and the operating conditions actually demonstrated by simulation.
 
 ---
 
@@ -544,6 +602,12 @@ The expected nominal baseline waveform is a current pulse of approximately:
 
 This project is an educational simulation for the supplied electronics assignment.
 
-The assignment states that the circuit is not recommended for real-world use or connection to a person without appropriate safety, regulatory, and medical-device requirements being satisfied.
+The circuit is not intended to be connected to a person or used as a medical device.
 
-The LTspice circuit, model, and simulation results in this repository are intended for educational and engineering evaluation only.
+The LTspice circuit, model, and simulation results are provided for educational and engineering evaluation only and do not constitute medical-device validation, certification, or safety approval.
+
+---
+
+## 17. License
+
+This project is released under the MIT License. See the `LICENSE` file for details.
